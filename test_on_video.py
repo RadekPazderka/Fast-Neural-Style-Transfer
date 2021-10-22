@@ -1,4 +1,4 @@
-from models import TransformerNet
+from models import StyleResnet18
 from utils import *
 import torch
 from torch.autograd import Variable
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     transform = style_transform()
 
     # Define model and load model checkpoint
-    transformer = TransformerNet().to(device)
+    transformer = StyleResnet18().to(device)
     transformer.load_state_dict(torch.load(args.checkpoint_model))
     transformer.eval()
 

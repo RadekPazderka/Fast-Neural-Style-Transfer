@@ -3,30 +3,35 @@ import os
 import sys
 import random
 from PIL import Image
-import numpy as np
-import torch
 import glob
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision.utils import save_image
-from models import TransformerNet, VGG16
+from torch.autograd import Variable
+
+from models.model_factory import StyleModelFactory
+from models.model_utils import FeatureExtractor
 from utils import *
 
+"""
+python train.py --dataset_path C:/Users/dnn_server/PycharmProjects/fast_neural_style_transfer/images/content/dataset  --style_image C:/Users/dnn_server/PycharmProjects/fast_neural_style_transfer/images/styles/mosaic.jpg
+
+"""
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parser for Fast-Neural-Style")
     parser.add_argument("--dataset_path", type=str, required=True, help="path to training dataset")
-    parser.add_argument("--style_image", type=str, default="style-images/mosaic.jpg", help="path to style image")
-    parser.add_argument("--epochs", type=int, default=1, help="Number of training epochs")
-    parser.add_argument("--batch_size", type=int, default=4, help="Batch size for training")
-    parser.add_argument("--image_size", type=int, default=256, help="Size of training images")
+    parser.add_argument("--style_image", type=str, default="images/styles/mosaic.jpg", help="path to style image")
+    parser.add_argument("--epochs", type=int, default=10000, help="Number of training epochs")
+    parser.add_argument("--batch_size", type=int, default=2, help="Batch size for training")
+    parser.add_argument("--image_size", type=int, default=640, help="Size of training images")
     parser.add_argument("--style_size", type=int, help="Size of style image")
     parser.add_argument("--lambda_content", type=float, default=1e5, help="Weight for content loss")
     parser.add_argument("--lambda_style", type=float, default=1e10, help="Weight for style loss")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
-    parser.add_argument("--checkpoint_model", type=str, help="Optional path to checkpoint model")
-    parser.add_argument("--checkpoint_interval", type=int, default=2000, help="Batches between saving model")
-    parser.add_argument("--sample_interval", type=int, default=1000, help="Batches between saving image samples")
+    parser.add_argument("--checkpoint_model", type=str, default=None, help="Optional path to checkpoint model")
+    parser.add_argument("--checkpoint_interval", type=int, default=100, help="Batches between saving model")
+    parser.add_argument("--sample_interval", type=int, default=10, help="Batches between saving image samples")
     args = parser.parse_args()
 
     style_name = args.style_image.split("/")[-1].split(".")[0]
@@ -40,39 +45,43 @@ if __name__ == "__main__":
     dataloader = DataLoader(train_dataset, batch_size=args.batch_size)
 
     # Defines networks
-    transformer = TransformerNet().to(device)
-    vgg = VGG16(requires_grad=False).to(device)
+    style_transformer = StyleModelFactory.StyleResnet18(args.checkpoint_model)
+    feature_extractor_vgg = FeatureExtractor(args.style_image, args.batch_size)
 
-    # Load checkpoint model if specified
-    if args.checkpoint_model:
-        transformer.load_state_dict(torch.load(args.checkpoint_model))
 
-    # Define optimizer and loss
-    optimizer = Adam(transformer.parameters(), args.lr)
-    l2_loss = torch.nn.MSELoss().to(device)
-
-    # Load style image
-    style = style_transform(args.style_size)(Image.open(args.style_image))
-    style = style.repeat(args.batch_size, 1, 1, 1).to(device)
-
-    # Extract style features
-    features_style = vgg(style)
-    gram_style = [gram_matrix(y) for y in features_style]
+    # Define optimizer
+    optimizer = Adam(style_transformer.model.parameters(), args.lr)
 
     # Sample 8 images for visual evaluation of the model
     image_samples = []
-    for path in random.sample(glob.glob(f"{args.dataset_path}/*/*.png"), 8):
+    for path in random.sample(glob.glob(f"{args.dataset_path}/*/*.jpg"), 8):
         image_samples += [style_transform(args.image_size)(Image.open(path))]
     image_samples = torch.stack(image_samples)
 
+    def save_single_image(batches_done):
+        style_transformer.model.eval()
+        # Prepare input
+        transform = style_transform()
+        single_img_path = r"C:\Users\dnn_server\PycharmProjects\fast_neural_style_transfer\images\content\dataset\1\360.jpg"
+
+        image_tensor = Variable(transform(Image.open(single_img_path))).to(device)
+        image_tensor = image_tensor.unsqueeze(0)
+
+        # Stylize image
+        with torch.no_grad():
+            stylized_image = denormalize(style_transformer.model(image_tensor)).cpu()
+
+        save_image(stylized_image, f"images/outputs/{style_name}-training/{batches_done}_sample.jpg")
+        style_transformer.model.train()
+
     def save_sample(batches_done):
         """ Evaluates the model and saves image samples """
-        transformer.eval()
+        style_transformer.model.eval()
         with torch.no_grad():
-            output = transformer(image_samples.to(device))
+            output = style_transformer.model(image_samples.to(device))
         image_grid = denormalize(torch.cat((image_samples.cpu(), output.cpu()), 2))
         save_image(image_grid, f"images/outputs/{style_name}-training/{batches_done}.jpg", nrow=4)
-        transformer.train()
+        style_transformer.model.train()
 
     for epoch in range(args.epochs):
         epoch_metrics = {"content": [], "style": [], "total": []}
@@ -80,21 +89,10 @@ if __name__ == "__main__":
             optimizer.zero_grad()
 
             images_original = images.to(device)
-            images_transformed = transformer(images_original)
+            images_transformed = style_transformer.model(images_original)
 
-            # Extract features
-            features_original = vgg(images_original)
-            features_transformed = vgg(images_transformed)
-
-            # Compute content loss as MSE between features
-            content_loss = args.lambda_content * l2_loss(features_transformed.relu2_2, features_original.relu2_2)
-
-            # Compute style loss as MSE between gram matrices
-            style_loss = 0
-            for ft_y, gm_s in zip(features_transformed, gram_style):
-                gm_y = gram_matrix(ft_y)
-                style_loss += l2_loss(gm_y, gm_s[: images.size(0), :, :])
-            style_loss *= args.lambda_style
+            content_loss = feature_extractor_vgg.get_content_loss(images_original, images_transformed, args.lambda_content)
+            style_loss = feature_extractor_vgg.get_style_loss(images_transformed, args.lambda_style)
 
             total_loss = content_loss + style_loss
             total_loss.backward()
@@ -123,7 +121,9 @@ if __name__ == "__main__":
             batches_done = epoch * len(dataloader) + batch_i + 1
             if batches_done % args.sample_interval == 0:
                 save_sample(batches_done)
+                save_single_image(batches_done)
 
             if args.checkpoint_interval > 0 and batches_done % args.checkpoint_interval == 0:
                 style_name = os.path.basename(args.style_image).split(".")[0]
-                torch.save(transformer.state_dict(), f"checkpoints/{style_name}_{batches_done}.pth")
+                checkpoint_path = "checkpoints/{}_{}.pth".format(style_name, batches_done)
+                style_transformer.save_checkpoint(checkpoint_path)

@@ -40,7 +40,7 @@ def train_transform(image_size):
 
 def style_transform(image_size=None):
     """ Transforms for style image """
-    resize = [transforms.Resize(image_size)] if image_size else []
+    resize = [transforms.Resize((image_size, image_size))] if image_size else []
     transform = transforms.Compose(resize + [transforms.ToTensor(), transforms.Normalize(mean, std)])
     return transform
 
