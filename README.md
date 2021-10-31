@@ -1,12 +1,16 @@
 # Fast Neural Style Transfer in PyTorch
 
-<p align="center">
-    <img src="assets/zurich.jpg" width="900"\>
-</p>
+![neuronovesite_cz](./assets/thumbnail_neuronovesite_cz.png)
 
-PyTorch implementation of [Fast Neural Style Transfer](https://cs.stanford.edu/people/jcjohns/eccv16/) ([official Lua implementation](https://github.com/jcjohnson/fast-neural-style)).
+**Czech education video here:**  https://youtu.be/99vXQcHzRBo
 
-I have made some trained models available [here](https://drive.google.com/drive/folders/1aRD6zakhcDImN2Y54qAT6f4801iLcCLB?usp=sharing).
+Pretrained models [here](https://drive.google.com/drive/folders/1aRD6zakhcDImN2Y54qAT6f4801iLcCLB?usp=sharing).
+
+## Dataset
+Download random images and paste them into ./demo_dataset/1
+
+Part of demo dataset downloaded from: https://www.kaggle.com/shamsaddin97/image-captioning-dataset-random-images
+
 
 ## Train
 
@@ -18,12 +22,21 @@ python3 train.py  --dataset_path <path-to-dataset> \
                   --image_size 256
 ```
 
-<p align="center">
-    <img src="assets/celeba_mosaic.gif" width="400"\>
-</p>
-<p align="center">
-    Figure: Training progress over the first 10,000 batches.
-</p>
+####Demo train
+```
+python3 train.py  --dataset_path images/demo_dataset \
+                  --style_image images/styles/cuphead.jpg \
+                  --epochs 100 \
+                  --batch_size 2 \
+                  --image_size 256
+```
+or simply (using default parameters):
+```
+python3 train.py
+```
+
+####Train process
+![neuronovesite_cz](./assets/training_process.gif)
 
 ## Test on Video
 
@@ -32,9 +45,7 @@ python3 test_on_video.py  --video_path <path-to-video> \
                           --checkpoint_model <path-to-checkpoint> \
 ```
 
-<p align="center">
-    <img src="assets/stylized-celtics.gif" width="400"\>
-</p>
+![neuronovesite_cz](./assets/stylized-celtics.gif)
 
 ## Test on Image
 

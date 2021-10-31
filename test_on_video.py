@@ -1,4 +1,4 @@
-from models import StyleResnet18
+from models.style_resnet18 import StyleResnet18
 from utils import *
 import torch
 from torch.autograd import Variable
@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     # Create video from frames
     video_name = args.video_path.split("/")[-1].split(".")[0]
-    writer = skvideo.io.FFmpegWriter(f"images/outputs/stylized-{video_name}.gif")
+    writer = skvideo.io.FFmpegWriter(f"images/outputs/stylized-{video_name}.mp4")
     for frame in tqdm.tqdm(stylized_frames, desc="Writing to video"):
         writer.writeFrame(frame)
     writer.close()

@@ -1,4 +1,4 @@
-from models import StyleResnet18
+from models.style_resnet18 import StyleResnet18
 from utils import *
 import torch
 from torch.autograd import Variable

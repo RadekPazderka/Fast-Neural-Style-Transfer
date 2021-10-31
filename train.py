@@ -20,11 +20,11 @@ python train.py --dataset_path C:/Users/dnn_server/PycharmProjects/fast_neural_s
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parser for Fast-Neural-Style")
-    parser.add_argument("--dataset_path", type=str, required=True, help="path to training dataset")
+    parser.add_argument("--dataset_path", type=str, default="images/demo_dataset", help="path to training dataset")
     parser.add_argument("--style_image", type=str, default="images/styles/mosaic.jpg", help="path to style image")
-    parser.add_argument("--epochs", type=int, default=10000, help="Number of training epochs")
+    parser.add_argument("--epochs", type=int, default=100, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=2, help="Batch size for training")
-    parser.add_argument("--image_size", type=int, default=640, help="Size of training images")
+    parser.add_argument("--image_size", type=int, default=256, help="Size of training images")
     parser.add_argument("--style_size", type=int, help="Size of style image")
     parser.add_argument("--lambda_content", type=float, default=1e5, help="Weight for content loss")
     parser.add_argument("--lambda_style", type=float, default=1e10, help="Weight for style loss")
@@ -58,21 +58,21 @@ if __name__ == "__main__":
         image_samples += [style_transform(args.image_size)(Image.open(path))]
     image_samples = torch.stack(image_samples)
 
-    def save_single_image(batches_done):
-        style_transformer.model.eval()
-        # Prepare input
-        transform = style_transform()
-        single_img_path = r"C:\Users\dnn_server\PycharmProjects\fast_neural_style_transfer\images\content\dataset\1\360.jpg"
-
-        image_tensor = Variable(transform(Image.open(single_img_path))).to(device)
-        image_tensor = image_tensor.unsqueeze(0)
-
-        # Stylize image
-        with torch.no_grad():
-            stylized_image = denormalize(style_transformer.model(image_tensor)).cpu()
-
-        save_image(stylized_image, f"images/outputs/{style_name}-training/{batches_done}_sample.jpg")
-        style_transformer.model.train()
+    # def save_single_image(batches_done):
+    #     style_transformer.model.eval()
+    #     # Prepare input
+    #     transform = style_transform()
+    #     single_img_path = r"C:\Users\dnn_server\PycharmProjects\fast_neural_style_transfer\images\content\dataset\1\360.jpg"
+    #
+    #     image_tensor = Variable(transform(Image.open(single_img_path))).to(device)
+    #     image_tensor = image_tensor.unsqueeze(0)
+    #
+    #     # Stylize image
+    #     with torch.no_grad():
+    #         stylized_image = denormalize(style_transformer.model(image_tensor)).cpu()
+    #
+    #     save_image(stylized_image, f"images/outputs/{style_name}-training/{batches_done}_sample.jpg")
+    #     style_transformer.model.train()
 
     def save_sample(batches_done):
         """ Evaluates the model and saves image samples """
@@ -121,7 +121,7 @@ if __name__ == "__main__":
             batches_done = epoch * len(dataloader) + batch_i + 1
             if batches_done % args.sample_interval == 0:
                 save_sample(batches_done)
-                save_single_image(batches_done)
+                # save_single_image(batches_done)
 
             if args.checkpoint_interval > 0 and batches_done % args.checkpoint_interval == 0:
                 style_name = os.path.basename(args.style_image).split(".")[0]
