@@ -22,7 +22,7 @@ python3 train.py  --dataset_path <path-to-dataset> \
                   --image_size 256
 ```
 
-####Demo train
+#### Demo train
 ```
 python3 train.py  --dataset_path images/demo_dataset \
                   --style_image images/styles/cuphead.jpg \
@@ -35,7 +35,7 @@ or simply (using default parameters):
 python3 train.py
 ```
 
-####Train process
+#### Train process
 ![neuronovesite_cz](./assets/training_process.gif)
 
 ## Test on Video
