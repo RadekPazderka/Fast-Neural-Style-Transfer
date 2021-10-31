@@ -26,8 +26,8 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=2, help="Batch size for training")
     parser.add_argument("--image_size", type=int, default=256, help="Size of training images")
     parser.add_argument("--style_size", type=int, help="Size of style image")
-    parser.add_argument("--lambda_content", type=float, default=1e5, help="Weight for content loss")
-    parser.add_argument("--lambda_style", type=float, default=1e10, help="Weight for style loss")
+    parser.add_argument("--c_weight", type=float, default=1e5, help="Weight for content loss")
+    parser.add_argument("--s_weight", type=float, default=1e10, help="Weight for style loss")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
     parser.add_argument("--checkpoint_model", type=str, default=None, help="Optional path to checkpoint model")
     parser.add_argument("--checkpoint_interval", type=int, default=100, help="Batches between saving model")
@@ -91,8 +91,8 @@ if __name__ == "__main__":
             images_original = images.to(device)
             images_transformed = style_transformer.model(images_original)
 
-            content_loss = feature_extractor_vgg.get_content_loss(images_original, images_transformed, args.lambda_content)
-            style_loss = feature_extractor_vgg.get_style_loss(images_transformed, args.lambda_style)
+            content_loss = feature_extractor_vgg.get_content_loss(images_original, images_transformed, args.c_weight)
+            style_loss = feature_extractor_vgg.get_style_loss(images_transformed, args.s_weight)
 
             total_loss = content_loss + style_loss
             total_loss.backward()
